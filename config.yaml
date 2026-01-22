@@ -1,0 +1,371 @@
+
+
+# ===================================================================
+#                  DATABASE CONNECTION (Required)
+# ===================================================================
+database:
+  enabled: true
+  
+  # Database connection details
+  server: "localhost"  # Change to your SQL Server hostname
+  database: "EDGE_DB"
+  port: 1433
+  
+  # Authentication method: "windows" or "sql"
+  authentication: "sql"  # Change to "windows" for Windows Authentication
+  
+  # SQL Server credentials (only used if authentication = "sql")
+  sql_credentials:
+    username: "sa"
+    password: "marine7089"  
+  
+  # Windows Authentication (only used if authentication = "windows")
+  windows_auth:
+    trusted_connection: true
+  
+  # Connection settings
+  timeout_seconds: 30
+  batch_size: 100
+  max_retries: 3
+  
+  # Table settings
+  metrics_table: "Metrics"
+  create_tables_if_not_exist: true
+
+# ===================================================================
+#        PRIMARY: APPLICATIONS TO MONITOR (Main Configuration)
+# ===================================================================
+applications:
+  - name: "Google"
+    url: "https://www.google.com"
+    criticality: "high"
+    sla_target_ms: 2000
+    enabled: true
+    
+  - name: "Microsoft"
+    url: "https://www.microsoft.com"
+    criticality: "high"
+    sla_target_ms: 2000
+    enabled: true
+  
+  - name: "GitHub"
+    url: "https://github.com"
+    criticality: "medium"
+    sla_target_ms: 3000
+    enabled: true
+  
+  - name: "CloudFlare"
+    url: "https://www.cloudflare.com"
+    criticality: "medium"
+    sla_target_ms: 2500
+    enabled: true
+
+  - name: "StackOverflow"
+    url: "https://stackoverflow.com"
+    criticality: "low"
+    sla_target_ms: 3000
+    enabled: false
+    
+  - name: "mogoa"
+    url: "https://mogoa.com"
+    criticality: "low"
+    sla_target_ms: 3000
+    enabled: true
+
+# ===================================================================
+#      SECONDARY: MULTI-HOST SECURITY MONITORING (Optional)
+# ===================================================================
+security_monitoring:
+  # Local security events (always collected)
+  local_events:
+    enabled: true
+    event_types:
+      failed_logins: true      # Event ID 4625
+      successful_logins: true  # Event ID 4624
+      firewall_drops: true     # Event IDs 5152, 5157
+      defender_threats: true   # Event IDs 1116-1119
+      mfa_events: true         # Event IDs 6272, 6273, 4776 
+      audit_changes: true      # Event IDs 4719, 1100-1108
+  
+  # Multi-host collection (via central log server)
+  multi_host:
+    enabled: false  # Set to true to enable
+    
+    central_server:
+      ip: "10.0.0.5"
+      username: "DOMAIN\\administrator"
+      password: "YourPassword123"
+      domain: "DOMAIN"
+    
+    monitored_hosts:
+      - name: "web-server-01"
+        ip: "10.0.1.10"
+        enabled: false
+      
+      - name: "app-server-01"
+        ip: "10.0.2.10"
+        enabled: false
+
+# ===================================================================
+#   AUDIT TRAIL & LOGGING HEALTH MONITORING
+# ===================================================================
+audit_monitoring:
+  enabled: true
+  
+  # Alert if no events received for X minutes
+  alert_if_no_events_for_minutes: 30
+  
+  # Logs to monitor for activity
+  monitored_logs:
+    - log_name: "Security"
+      event_ids: [4624, 4625, 4776, 6272, 6273]
+      description: "Login & MFA Events"
+      critical: true
+    
+    - log_name: "Security"
+      event_ids: [5152, 5157]
+      description: "Firewall Events"
+      critical: true
+    
+    - log_name: "Microsoft-Windows-Windows Defender/Operational"
+      event_ids: [1116, 1117, 1118, 1119]
+      description: "Windows Defender"
+      critical: true
+    
+    - log_name: "System"
+      event_ids: [1, 6005, 6006, 6008, 6009]
+      description: "System Events"
+      critical: true
+  
+  # For central logging: track source host health
+  source_host_health:
+    enabled: false
+
+# ===================================================================
+#  VULNERABILITY SCANNER
+# ===================================================================
+vulnerability_scanner:
+  enabled: true
+  scan_interval_minutes: 60
+  
+  port_scan:
+    enabled: true
+    timeout_seconds: 2
+    
+    dangerous_ports:
+      - 21    # FTP
+      - 23    # Telnet
+      - 135   # Windows RPC
+      - 139   # NetBIOS
+      - 445   # SMB
+      - 1433  # SQL Server
+      - 3306  # MySQL
+      - 3389  # RDP
+      - 5432  # PostgreSQL
+    
+    expected_ports:
+      - 80    # HTTP
+      - 443   # HTTPS
+  
+  ssl_tls_scan:
+    enabled: true
+    check_weak_protocols: true
+    check_weak_ciphers: true
+    timeout_seconds: 5
+  
+  certificate_scan:
+    enabled: true
+    warn_expiry_days: 30
+    critical_expiry_days: 7
+    check_self_signed: true
+    check_hostname_mismatch: true
+  
+  http_headers_scan:
+    enabled: true
+    timeout_seconds: 10
+    
+    required_headers:
+      - Strict-Transport-Security
+      - X-Frame-Options
+      - X-Content-Type-Options
+      - Content-Security-Policy
+    
+    disclosure_headers:
+      - Server
+      - X-Powered-By
+      - X-AspNet-Version
+
+# ===================================================================
+#          NETWORK INTERFACES (Auto-Detected by Default)
+# ===================================================================
+network:
+  interfaces:
+    auto_detect: true
+    monitor_all: true
+    exclude_loopback: true
+    exclude_virtual: false
+
+# ===================================================================
+#              DNS SERVERS (Auto-Detected by Default)
+# ===================================================================
+dns:
+  auto_detect: true
+
+# ===================================================================
+#   INTERNET & INFRASTRUCTURE HEALTH MONITORING
+#  
+# ===================================================================
+internet:
+  enabled: true
+  
+  # Internet connectivity targets (for WAN availability)
+  connectivity_targets:
+    - "8.8.8.8"           # Google DNS
+    - "1.1.1.1"           # Cloudflare DNS
+    - "9.9.9.9"           # Quad9 DNS
+  
+  # Infrastructure device monitoring
+  # Add your routers, switches, gateways, firewalls here
+  infrastructure_targets:
+    # Example: Gateway/Router
+    - target: "192.168.1.1"      
+      name: "Primary Gateway"
+      enabled: true
+      description: "Main internet gateway"
+    
+    # Example: Core Switch
+    - target: "192.168.1.2"      #  CHANGE to your switch IP
+      name: "Core Switch"
+      enabled: false               # Set to true when ready
+      description: "Main network switch"
+    
+    # Example: Firewall
+    - target: "192.168.1.3"      #  CHANGE to your firewall IP
+      name: "Edge Firewall"
+      enabled: false               # Set to true when ready
+      description: "Perimeter firewall"
+    
+    # Example: WAN Edge Device
+    - target: "10.0.0.1"         #  CHANGE to your WAN device IP
+      name: "WAN Edge Router"
+      enabled: false               # Set to true when ready
+      description: "WAN connection router"
+    
+    # Add more infrastructure devices as needed
+    # - target: "IP_ADDRESS"
+    #   name: "Device Name"
+    #   enabled: true
+    #   description: "Device description"
+  
+  # Connectivity test settings
+  test_interval_seconds: 60
+  tests:
+    icmp_ping: true
+    dns_resolution: true
+    http_connectivity: true
+
+# ===================================================================
+#                    MONITORING SCHEDULE
+# ===================================================================
+monitoring:
+  interval_seconds: 60
+  
+  intervals:
+    applications: 1
+    security_events: 1
+    network_interfaces: 1
+    infrastructure_checks: 1      
+    internet_checks: 1
+    dns_checks: 2
+    certificate_checks: 10
+    mfa_health_checks: 1        
+    audit_health_checks: 1
+    vulnerability_scans: 60
+
+# ===================================================================
+#                         ALERTING
+# ===================================================================
+alerting:
+  enabled: true
+  
+  thresholds:
+    # Application performance
+    application_latency_ms: 5000
+    application_availability_pct: 99.0
+    
+    # Network
+    packet_loss_pct: 5.0
+    bandwidth_utilization_pct: 90
+    dns_resolution_ms: 1000
+    
+    # Security
+    failed_logins_per_minute: 10
+    firewall_drops_per_minute: 1000
+    
+    #  MFA Health
+    mfa_success_rate_warning: 90.0
+    mfa_success_rate_critical: 85.0
+    mfa_user_failure_threshold: 3
+    
+    #  Infrastructure
+    infrastructure_latency_warning_ms: 50
+    infrastructure_latency_critical_ms: 100
+    infrastructure_packet_loss_warning_pct: 2
+    infrastructure_packet_loss_critical_pct: 5
+    infrastructure_health_score_warning: 80
+    infrastructure_health_score_critical: 60
+    
+    # TLS/Certificates
+    cert_expiry_warning_days: 30
+    cert_expiry_critical_days: 7
+    
+    # Audit & Vulnerabilities
+    logging_stale_minutes: 30
+    vulnerability_score_critical: 50
+    vulnerability_score_warning: 20
+
+# ===================================================================
+#                         LOGGING
+# ===================================================================
+logging:
+  level: "INFO"
+  log_to_console: true
+  log_to_file: true
+  log_file: "C:\\EdgeAgent\\Logs\\edge_agent.log"  # Windows path
+  # log_file: "/var/log/edge_agent.log"  # Linux path
+  max_log_size_mb: 100
+  log_rotation_count: 5
+
+
+# ===================================================================
+#                   CONFIGURATION GUIDE
+# ===================================================================
+# 
+# STEP 1: Configure Database Connection
+# --------------------------------------
+# 1. Update 'server' with your SQL Server hostname or IP
+# 2. Choose authentication method ('sql' or 'windows')
+# 3. If using SQL authentication, set username and password
+# 4. Database and table will be created automatically
+#
+# STEP 2: Configure Infrastructure Targets
+# -----------------------------------------
+# 1. Edit the 'infrastructure_targets' section
+# 2. Add your network devices (routers, switches, firewalls)
+# 3. Set correct IP addresses for each device
+# 4. Give each device a descriptive name
+# 5. Enable devices by setting 'enabled: true'
+#
+# STEP 3: Configure Applications to Monitor
+# ------------------------------------------
+# 1. Edit the 'applications' section
+# 2. Add your critical applications and URLs
+# 3. Set appropriate SLA targets
+# 4. Enable/disable as needed
+#
+# STEP 4: Test Configuration
+# ---------------------------
+# Run the agent:
+# STEP 5: Verify Database Metrics
+# --------------------------------
+# ===================================================================
